@@ -6,7 +6,7 @@ Tests for R3-R7 requirements
 import unittest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
-import library_service as ls
+import services.library_service as ls
 
 
 class TestBorrowBook(unittest.TestCase):
