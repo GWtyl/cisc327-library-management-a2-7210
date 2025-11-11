@@ -1,5 +1,5 @@
 # Library Management System - Flask Web Application with SQLite
-![CISC 327 LMS](https://github.com/GWtyl/cisc327-library-management-a2-7210/blob/main/.github/workflows/test.yml/badge.svg)
+![CISC 327 LMS](https://github.com/GWtyl/cisc327-library-management-a2-7210/actions/workflows/test.yml/badge.svg)
 [![codecov](https://codecov.io/gh/GWtyl/cisc327-library-management-a2-7210/blob/graph/badge.svg?token=M6SU3A6P4R)](https://codecov.io/gh/GWtyl/cisc327-library-management-a2-7210)
 ## Overview
 
