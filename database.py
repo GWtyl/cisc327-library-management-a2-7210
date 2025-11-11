@@ -199,3 +199,26 @@ def update_borrow_record_return_date(patron_id: str, book_id: int, return_date: 
     except Exception as e:
         conn.close()
         return False
+    
+def get_borrow_record_by_patron_and_book(patron_id: str, book_id: int) -> Optional[Dict]:
+    """Get an active borrow record for a specific patron and book."""
+    conn = get_db_connection()
+    record = conn.execute('''
+        SELECT * FROM borrow_records 
+        WHERE patron_id = ? AND book_id = ? AND return_date IS NULL
+        ORDER BY borrow_date DESC
+        LIMIT 1
+    ''', (patron_id, book_id)).fetchone()
+    conn.close()
+    return dict(record) if record else None
+
+def get_all_patron_borrow_records(patron_id: str) -> List[Dict]:
+    """Get all borrow records (past and present) for a patron."""
+    conn = get_db_connection()
+    records = conn.execute('''
+        SELECT * FROM borrow_records 
+        WHERE patron_id = ?
+        ORDER BY borrow_date DESC
+    ''', (patron_id,)).fetchall()
+    conn.close()
+    return [dict(record) for record in records]
