@@ -155,3 +155,4 @@ def test_get_patron_status_with_history(monkeypatch):
     assert len(result['borrowing_history']) == 2
     assert result['borrowing_history'][0]['return_date'] == '2025-09-14'
     assert 'return_date' not in result['borrowing_history'][1]
+
