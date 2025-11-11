@@ -3,9 +3,6 @@ import unittest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
 import services.library_service as ls
-from services.library_service import (
-    calculate_late_fee_for_book
-)
 ''' old test
 def test_calculate_late_fee_returns_dict():
     """Ensure calculate_late_fee returns a dict."""
@@ -41,7 +38,7 @@ def test_calculate_late_fee_with_overdue_book(monkeypatch):
         'return_date': None
     })
     
-    monkeypatch.setattr('library_service.get_borrow_record_by_patron_and_book', mock_get_borrow)
+    monkeypatch.setattr('services.library_service.get_borrow_record_by_patron_and_book', mock_get_borrow)
     
     # Execute
     result = ls.calculate_late_fee_for_book('123456', 1)
@@ -64,7 +61,7 @@ def test_calculate_late_fee_not_overdue(monkeypatch):
         'return_date': None
     })
     
-    monkeypatch.setattr('library_service.get_borrow_record_by_patron_and_book', mock_get_borrow)
+    monkeypatch.setattr('services.library_service.get_borrow_record_by_patron_and_book', mock_get_borrow)
     
     # Execute
     result = ls.calculate_late_fee_for_book('123456', 1)
@@ -78,7 +75,7 @@ def test_calculate_late_fee_not_overdue(monkeypatch):
 def test_calculate_late_fee_no_borrow_record(monkeypatch):
     """Test late fee calculation with no active borrow record"""
     mock_get_borrow = MagicMock(return_value=None)
-    monkeypatch.setattr('library_service.get_borrow_record_by_patron_and_book', mock_get_borrow)
+    monkeypatch.setattr('services.library_service.get_borrow_record_by_patron_and_book', mock_get_borrow)
     
     result = ls.calculate_late_fee_for_book('123456', 1)
     
@@ -96,7 +93,7 @@ def test_calculate_late_fee_already_returned(monkeypatch):
         'return_date': '2025-10-05'
     })
     
-    monkeypatch.setattr('library_service.get_borrow_record_by_patron_and_book', mock_get_borrow)
+    monkeypatch.setattr('services.library_service.get_borrow_record_by_patron_and_book', mock_get_borrow)
     
     result = ls.calculate_late_fee_for_book('123456', 1)
     
@@ -117,7 +114,7 @@ def test_calculate_late_fee_maximum_cap(monkeypatch):
         'return_date': None
     })
     
-    monkeypatch.setattr('library_service.get_borrow_record_by_patron_and_book', mock_get_borrow)
+    monkeypatch.setattr('services.library_service.get_borrow_record_by_patron_and_book', mock_get_borrow)
     
     result = ls.calculate_late_fee_for_book('123456', 1)
     

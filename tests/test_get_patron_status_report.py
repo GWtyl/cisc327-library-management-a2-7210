@@ -51,8 +51,8 @@ def test_get_patron_status_with_active_borrows(monkeypatch):
         {'id': 2, 'title': 'Book 2', 'author': 'Author 2'}
     ])
     
-    monkeypatch.setattr('library_service.get_all_patron_borrow_records', mock_get_all_records)
-    monkeypatch.setattr('library_service.get_book_by_id', mock_get_book)
+    monkeypatch.setattr('services.library_service.get_all_patron_borrow_records', mock_get_all_records)
+    monkeypatch.setattr('services.library_service.get_book_by_id', mock_get_book)
     
     result = ls.get_patron_status_report('123456')
     
@@ -66,7 +66,7 @@ def test_get_patron_status_no_active_borrows(monkeypatch):
     """Test patron status with no currently borrowed books"""
     mock_get_all_records = MagicMock(return_value=[])
     
-    monkeypatch.setattr('library_service.get_all_patron_borrow_records', mock_get_all_records)
+    monkeypatch.setattr('services.library_service.get_all_patron_borrow_records', mock_get_all_records)
     
     result = ls.get_patron_status_report('123456')
     
@@ -103,8 +103,8 @@ def test_get_patron_status_with_overdue_books(monkeypatch):
         'author': 'Some Author'
     })
     
-    monkeypatch.setattr('library_service.get_all_patron_borrow_records', mock_get_all_records)
-    monkeypatch.setattr('library_service.get_book_by_id', mock_get_book)
+    monkeypatch.setattr('services.library_service.get_all_patron_borrow_records', mock_get_all_records)
+    monkeypatch.setattr('services.library_service.get_book_by_id', mock_get_book)
     
     result = ls.get_patron_status_report('123456')
     
@@ -137,8 +137,8 @@ def test_get_patron_status_with_history(monkeypatch):
         {'id': 2, 'title': 'Book 2', 'author': 'Author 2'}
     ])
     
-    monkeypatch.setattr('library_service.get_all_patron_borrow_records', mock_get_all_records)
-    monkeypatch.setattr('library_service.get_book_by_id', mock_get_book)
+    monkeypatch.setattr('services.library_service.get_all_patron_borrow_records', mock_get_all_records)
+    monkeypatch.setattr('services.library_service.get_book_by_id', mock_get_book)
     
     result = ls.get_patron_status_report('123456')
     

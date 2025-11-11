@@ -3,28 +3,26 @@ import unittest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
 import services.library_service as ls
-from services.library_service import (
-    search_books_in_catalog
-)
+
 
 def test_search_books_returns_list():
     """Ensure search_books_in_catalog returns a list."""
-    result = search_books_in_catalog("anything", "title")
+    result = ls.search_books_in_catalog("anything", "title")
     assert isinstance(result, list)
 
 def test_search_books_empty_result_default():
     """Ensure default return is an empty list."""
-    result = search_books_in_catalog("Harry", "title")
+    result = ls.search_books_in_catalog("Harry", "title")
     assert result == []
 
 def test_search_books_case_insensitivity_placeholder():
     """Even with different case, placeholder still returns empty."""
-    result = search_books_in_catalog("harry", "author")
+    result = ls.search_books_in_catalog("harry", "author")
     assert result == []
 
 def test_search_books_invalid_type_placeholder():
     """Invalid search type still returns empty list."""
-    result = search_books_in_catalog("12345", "nonsense")
+    result = ls.search_books_in_catalog("12345", "nonsense")
     assert result == []
     
 def test_search_books_by_title(monkeypatch):
@@ -35,7 +33,7 @@ def test_search_books_by_title(monkeypatch):
         {'id': 3, 'title': 'Advanced Python', 'author': 'Bob Wilson', 'isbn': '3333333333333'}
     ])
     
-    monkeypatch.setattr('library_service.get_all_books', mock_get_all_books)
+    monkeypatch.setattr('services.library_service.get_all_books', mock_get_all_books)
     
     result = ls.search_books_in_catalog('python', 'title')
     
@@ -50,7 +48,7 @@ def test_search_books_by_author(monkeypatch):
         {'id': 2, 'title': 'Java Basics', 'author': 'John Smith', 'isbn': '2222222222222'}
     ])
     
-    monkeypatch.setattr('library_service.get_all_books', mock_get_all_books)
+    monkeypatch.setattr('services.library_service.get_all_books', mock_get_all_books)
     
     result = ls.search_books_in_catalog('john', 'author')
     
@@ -64,7 +62,7 @@ def test_search_books_by_isbn(monkeypatch):
         {'id': 2, 'title': 'Web Development', 'author': 'Bob Smith', 'isbn': '9785678901234'}
     ])
     
-    monkeypatch.setattr('library_service.get_all_books', mock_get_all_books)
+    monkeypatch.setattr('services.library_service.get_all_books', mock_get_all_books)
     
     result = ls.search_books_in_catalog('9781234567890', 'isbn')
     
@@ -92,7 +90,7 @@ def test_search_books_no_results(monkeypatch):
         {'id': 1, 'title': 'Python Programming', 'author': 'John Doe', 'isbn': '1111111111111'}
     ])
     
-    monkeypatch.setattr('library_service.get_all_books', mock_get_all_books)
+    monkeypatch.setattr('services.library_service.get_all_books', mock_get_all_books)
     
     result = ls.search_books_in_catalog('nonexistent', 'title')
     
