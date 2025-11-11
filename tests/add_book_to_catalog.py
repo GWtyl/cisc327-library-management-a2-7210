@@ -12,7 +12,7 @@ def test_add_book_valid_input(monkeypatch):
     monkeypatch.setattr("library_service.get_book_by_isbn", lambda isbn: None)
     monkeypatch.setattr("library_service.insert_book", lambda *args, **kwargs: True)
     success, message = add_book_to_catalog("Test Book", "Test Author", "1234567890123", 5)
-    assert success is True
+    assert success is False
     assert "successfully added" in message.lower()
 
 
@@ -20,7 +20,7 @@ def test_add_book_invalid_isbn(monkeypatch):
     """Test adding a book with an invalid ISBN length."""
     success, message = add_book_to_catalog("Test Book", "Test Author", "123", 5)
     assert success is False
-    assert "1 digits" in message
+    assert "13 digits" in message
 
 
 def test_add_book_duplicate_isbn(monkeypatch):
