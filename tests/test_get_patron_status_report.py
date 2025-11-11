@@ -14,18 +14,28 @@ def test_get_patron_status_returns_dict():
 
 def test_get_patron_status_empty_by_default():
     """Ensure default returned dict is empty."""
-    result = ls.get_patron_status_report("123456")
-    assert result == {}
+    result = ls.get_patron_status_report("000000")
+    assert isinstance(result, dict)
+    assert result['patron_id'] == "000000"
+    assert result['currently_borrowed'] == []
+    assert result['num_books_borrowed'] == 0
+    assert result['total_late_fees'] == 0.0
+    assert result['borrowing_history'] == []
 
 def test_get_patron_status_invalid_id():
     """Even invalid patron IDs return empty dict."""
     result = ls.get_patron_status_report("badid")
-    assert result == {}
+    assert isinstance(result, dict)
+    assert result == {
+            'error': 'Invalid patron ID'
+        }
 
 def test_get_patron_status_edge_case_empty_id():
     """Edge case: empty patron ID returns empty dict."""
     result = ls.get_patron_status_report("")
-    assert result == {}
+    assert result == {
+            'error': 'Invalid patron ID'
+        }
 
 def test_get_patron_status_with_active_borrows(monkeypatch):
     """Test patron status with active borrowed books"""
