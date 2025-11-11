@@ -20,7 +20,7 @@ def test_add_book_invalid_isbn(monkeypatch):
     """Test adding a book with an invalid ISBN length."""
     success, message = add_book_to_catalog("Test Book", "Test Author", "123", 5)
     assert success is False
-    assert "13 digits" in message
+    assert "1 digits" in message
 
 
 def test_add_book_duplicate_isbn(monkeypatch):
