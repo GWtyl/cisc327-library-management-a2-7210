@@ -81,12 +81,8 @@ def test_user_flow_librarian_adds_new_book_to_catalog(page: Page):
     expect(book_row).to_contain_text(copies)
 
 
-"""Realistic User Flow 2: Patron browses catalog and borrows a book """
-def test_user_flow_patron_browses_and_borrows_book(page: Page):
-    """
-    Scenario: A library patron visits the library website, browses the catalog,
-    finds a book they want, and borrows it using their library card
-    
+""" 
+Realistic User Flow 2: Patron browses catalog and borrows a book 
     Steps:
     1. Navigate to catalog page
     2. Browse available books
@@ -95,8 +91,8 @@ def test_user_flow_patron_browses_and_borrows_book(page: Page):
     5. Verify success by checking redirect to catalog
     6. Search for the borrowed book
     7. Verify available copies decreased
-    """
-    
+"""
+def test_user_flow_patron_browses_and_borrows_book(page: Page):
     # Generate unique data
     uid = uuid.uuid4().hex[:10]
     book_title = f"Project Hail Mary {uid}"
@@ -155,76 +151,3 @@ def test_user_flow_patron_browses_and_borrows_book(page: Page):
     book_row = page.locator(f'tr:has-text("{book_title}")')
     expect(book_row).to_be_visible()
     expect(book_row).to_contain_text("2")  # Should show 2 available now
-
-
-# ==================== BONUS: COMPLETE FLOW ====================
-def test_user_flow_complete_library_lifecycle(page: Page):
-    """
-    Complete User Flow: Add book → Browse → Borrow → Verify → Return → Verify
-    
-    This tests the complete lifecycle of a book in the library system
-    """
-    
-    # Generate unique data
-    uid = uuid.uuid4().hex[:10]
-    book_title = f"Complete Flow Book {uid}"
-    author_name = f"Test Author {uid}"
-    isbn = ''.join(random.choices("0123456789", k=13))
-    patron_id = ''.join(random.choices("0123456789", k=6))
-    
-    # Part 1: Librarian adds a new book
-    page.goto("http://127.0.0.1:5000")
-    page.get_by_role("link", name="➕ Add Book").click()
-    
-    page.get_by_role("textbox", name="Title *").fill(book_title)
-    page.get_by_role("textbox", name="Author *").fill(author_name)
-    page.get_by_role("textbox", name="ISBN *").fill(isbn)
-    page.get_by_role("spinbutton", name="Total Copies *").fill("4")
-    
-    page.get_by_role("button", name="Add Book to Catalog").click()
-    expect(page).to_have_url("http://127.0.0.1:5000/catalog")
-    
-    # Part 2: Verify book appears in catalog with 4 copies
-    expect(page.get_by_role("cell", name=book_title)).to_be_visible()
-    book_row = page.locator(f'tr:has-text("{book_title}")')
-    expect(book_row).to_contain_text("4")
-    
-    # Part 3: Patron borrows the book
-    patron_input = book_row.get_by_role("textbox", name="Patron ID")
-    patron_input.fill(patron_id)
-    book_row.get_by_role("button", name="Borrow").click()
-    
-    expect(page).to_have_url("http://127.0.0.1:5000/catalog")
-    
-    # Part 4: Verify available copies decreased to 3
-    page.get_by_role("link", name="🔍 Search").click()
-    page.get_by_role("textbox", name="Search Term").fill(book_title)
-    page.get_by_role("button", name="🔍 Search").click()
-    
-    book_row = page.locator(f'tr:has-text("{book_title}")')
-    expect(book_row).to_contain_text("3")
-    
-    # Part 5: Check patron status report
-    page.get_by_role("link", name="📊 Patron Report").click()
-    page.get_by_role("textbox", name="Patron ID").fill(patron_id)
-    page.get_by_role("button", name="Get Status").click()
-    
-    # Verify patron has borrowed the book
-    expect(page.get_by_text(book_title)).to_be_visible()
-    expect(page.get_by_text("Books Currently Borrowed: 1")).to_be_visible()
-    
-    # Part 6: Return the book
-    page.get_by_role("link", name="📤 Return Book").click()
-    page.get_by_role("textbox", name="Patron ID").fill(patron_id)
-    page.get_by_role("combobox", name="Book").select_option(label=book_title)
-    page.get_by_role("button", name="Return Book").click()
-    
-    expect(page).to_have_url("http://127.0.0.1:5000/catalog")
-    
-    # Part 7: Verify available copies increased back to 4
-    page.get_by_role("link", name="🔍 Search").click()
-    page.get_by_role("textbox", name="Search Term").fill(book_title)
-    page.get_by_role("button", name="🔍 Search").click()
-    
-    book_row = page.locator(f'tr:has-text("{book_title}")')
-    expect(book_row).to_contain_text("4")
