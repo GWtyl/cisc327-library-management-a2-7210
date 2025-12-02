@@ -1,6 +1,5 @@
 import subprocess
 import time
-import pytest
 import uuid
 import random
 import requests
