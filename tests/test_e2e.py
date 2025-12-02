@@ -1,117 +1,230 @@
+import subprocess
+import time
+import pytest
+import uuid
+import random
+import requests
 from flask import url_for
 import pytest
 from playwright.sync_api import Page, expect
     
-#User Flow 1
+@pytest.fixture(scope="session", autouse=True)
+def flask_server():
+    """Start the Flask app in a subprocess for the entire test session."""
+    proc = subprocess.Popen(["python", "app.py"])
+    
+    # Wait for Flask to be up
+    for _ in range(20):  # 20 * 0.5s = 10s max
+        try:
+            r = requests.get("http://127.0.0.1:5000")
+            if r.status_code == 200:
+                break
+        except:
+            time.sleep(0.5)
+    else:
+        proc.terminate()
+        raise RuntimeError("Flask server did not start in time")
+    
+    yield  # tests run here
+    
+    # Teardown: stop Flask
+    proc.terminate()
+    proc.wait()
+
+
+"""Realistic User Flow 1: Librarian adds a new book to the catalog"""
 def test_user_flow_librarian_adds_new_book_to_catalog(page: Page):
-   
-    # Step 1: Librarian navigates to add book page
-    page.goto("http://localhost:5000/add-book")
+
+    # Generate unique book data to avoid conflicts
+    uid = uuid.uuid4().hex[:10]
+    book_title = f"The Midnight Library {uid}"
+    author_name = f"Matt Haig {uid}"
+    isbn = ''.join(random.choices("0123456789", k=13))
+    copies = "5"
     
-    # Verify we're on the correct page
-    expect(page.locator('h1:has-text("Add New Book")')).to_be_visible()
+    # Step 1: Navigate to catalog
+    page.goto("http://127.0.0.1:5000")
+    page.get_by_role("link", name="📖 Catalog").click()
+    expect(page).to_have_url("http://127.0.0.1:5000/catalog")
     
-    # Step 2: Librarian fills in the book details
-    page.fill('input[name="title"]', 'Test Book')
-    page.fill('input[name="author"]', 'Test User')
-    page.fill('input[name="isbn"]', '2354596410555')
-    page.fill('input[name="total_copies"]', '5')
+    # Step 2: Click "Add Book" button
+    page.get_by_role("link", name="➕ Add Book").click()
+    expect(page).to_have_url("http://127.0.0.1:5000/add_book")
     
-    # Step 3: Librarian submits the form
-    page.click('button[type="submit"]')
+    # Step 3: Fill in the book details
+    page.get_by_role("textbox", name="Title *").click()
+    page.get_by_role("textbox", name="Title *").fill(book_title)
     
-    # Step 4: Verify success message appears
-    expect(page.locator('text=successfully added')).to_be_visible()
-    expect(page.locator('text=Test Book')).to_be_visible()
+    page.get_by_role("textbox", name="Author *").click()
+    page.get_by_role("textbox", name="Author *").fill(author_name)
     
-    # Step 5: Librarian navigates to catalog to verify
-    page.goto("http://localhost:5000/catalog")
+    page.get_by_role("textbox", name="ISBN *").click()
+    page.get_by_role("textbox", name="ISBN *").fill(isbn)
     
-    # Verify catalog page loaded
-    expect(page.locator('h1:has-text("Book Catalog")')).to_be_visible()
+    page.get_by_role("spinbutton", name="Total Copies *").click()
+    page.get_by_role("spinbutton", name="Total Copies *").fill(copies)
     
-    # Step 6: Verify the book appears in the catalog
-    expect(page.locator('text=Test Book')).to_be_visible()
-    expect(page.locator('text=Test User')).to_be_visible()
-    expect(page.locator('text=2354596410555')).to_be_visible()
+    # Step 4: Submit the form
+    page.get_by_role("button", name="Add Book to Catalog").click()
     
-    # Step 7: Verify available copies shows "5 / 5" or similar format
-    book_row = page.locator('tr:has-text("Test Book")')
+    # Step 5: Verify success by checking redirect to catalog
+    expect(page).to_have_url("http://127.0.0.1:5000/catalog")
+    
+    # Step 6 & 7: Verify the book appears with correct details
+    expect(page.get_by_role("cell", name=book_title)).to_be_visible()
+    expect(page.get_by_role("cell", name=author_name)).to_be_visible()
+    expect(page.get_by_role("cell", name=isbn)).to_be_visible()
+    
+    # Verify the available copies
+    book_row = page.locator(f'tr:has-text("{book_title}")')
     expect(book_row).to_be_visible()
-    
-    # Check that the copies information is displayed
-    # This could be "5" or "5/5" or "5 available" depending on your UI
-    expect(book_row).to_contain_text('5')
-    
-    # Verify the borrow button is present and enabled
-    borrow_button = book_row.locator('button:has-text("Borrow")')
-    expect(borrow_button).to_be_visible()
-    expect(borrow_button).to_be_enabled()
+    expect(book_row).to_contain_text(copies)
 
 
-#Test 2
-def test_user_flow_patron_borrows_book_from_catalog(page: Page):
-
-    # Step 1: Patron navigates to the catalog
-    page.goto("http://localhost:5000/catalog")
+"""Realistic User Flow 2: Patron browses catalog and borrows a book """
+def test_user_flow_patron_browses_and_borrows_book(page: Page):
+    """
+    Scenario: A library patron visits the library website, browses the catalog,
+    finds a book they want, and borrows it using their library card
     
-    # Verify catalog page loaded
-    expect(page.locator('h1:has-text("Book Catalog")')).to_be_visible()
+    Steps:
+    1. Navigate to catalog page
+    2. Browse available books
+    3. Enter patron ID
+    4. Click "Borrow" button for a specific book
+    5. Verify success by checking redirect to catalog
+    6. Search for the borrowed book
+    7. Verify available copies decreased
+    """
     
-    # Step 2: Patron browses and sees available books
-    # Verify the existing book is displayed
-    expect(page.locator('text=Existing Book')).to_be_visible()
-    expect(page.locator('text=Existing Author')).to_be_visible()
+    # Generate unique data
+    uid = uuid.uuid4().hex[:10]
+    book_title = f"Project Hail Mary {uid}"
+    author_name = f"Andy Weir {uid}"
+    isbn = ''.join(random.choices("0123456789", k=13))
+    patron_id = ''.join(random.choices("0123456789", k=6))
+    initial_copies = "3"
     
-    # Verify the book shows as available
-    book_row = page.locator('tr:has-text("Existing Book")')
+    # First, add a book that we can borrow
+    page.goto("http://127.0.0.1:5000/add_book")
+    page.get_by_role("textbox", name="Title *").fill(book_title)
+    page.get_by_role("textbox", name="Author *").fill(author_name)
+    page.get_by_role("textbox", name="ISBN *").fill(isbn)
+    page.get_by_role("spinbutton", name="Total Copies *").fill(initial_copies)
+    page.get_by_role("button", name="Add Book to Catalog").click()
+    
+    # Step 1: Navigate to catalog
+    page.goto("http://127.0.0.1:5000")
+    page.get_by_role("link", name="📖 Catalog").click()
+    expect(page).to_have_url("http://127.0.0.1:5000/catalog")
+    
+    # Step 2: Browse and verify the book is available
+    expect(page.get_by_role("cell", name=book_title)).to_be_visible()
+    expect(page.get_by_role("cell", name=author_name)).to_be_visible()
+    
+    # Verify initial available copies
+    book_row = page.locator(f'tr:has-text("{book_title}")')
     expect(book_row).to_be_visible()
+    expect(book_row).to_contain_text("3")
     
-    # Check initial available copies (should be 2)
-    expect(book_row).to_contain_text('2')
+    # Step 3: Enter patron ID
+    patron_input = book_row.get_by_role("textbox", name="Patron ID")
+    expect(patron_input).to_be_visible()
+    patron_input.click()
+    patron_input.fill(patron_id)
     
-    # Step 3: Patron clicks the "Borrow" button
-    borrow_button = book_row.locator('button:has-text("Borrow")')
+    # Step 4: Click "Borrow" button
+    borrow_button = book_row.get_by_role("button", name="Borrow")
     expect(borrow_button).to_be_visible()
     expect(borrow_button).to_be_enabled()
     borrow_button.click()
     
-    # Should navigate to borrow page or show a form
-    # Verify we're on the borrow page or modal appeared
-    expect(page.locator('text=Patron ID')).to_be_visible()
+    # Step 5: Verify success by checking redirect to catalog
+    expect(page).to_have_url("http://127.0.0.1:5000/catalog")
     
-    # Step 4: Patron enters their library card number
-    patron_id_input = page.locator('input[name="patron_id"]')
-    expect(patron_id_input).to_be_visible()
-    patron_id_input.fill('123456')
+    # Step 6: Search for the borrowed book to verify changes
+    page.get_by_role("link", name="🔍 Search").click()
+    page.get_by_role("textbox", name="Search Term").click()
+    page.get_by_role("textbox", name="Search Term").fill(book_title)
+    page.get_by_role("button", name="🔍 Search").click()
     
-    # Step 5: Patron submits the borrow request
-    submit_button = page.locator('button[type="submit"]')
-    submit_button.click()
+    # Step 7: Verify the book appears and available copies decreased
+    expect(page.get_by_role("cell", name=book_title)).to_be_visible()
     
-    # Step 6: Verify success confirmation message
-    expect(page.locator('text=Successfully borrowed')).to_be_visible()
-    expect(page.locator('text=Existing Book')).to_be_visible()
-    
-    # Verify due date is displayed (14 days from now)
-    expect(page.locator('text=Due date')).to_be_visible()
-    
-    # The confirmation should show the specific due date
-    confirmation = page.locator('.alert-success, .success-message, .confirmation')
-    expect(confirmation).to_be_visible()
-    
-    # Step 7: Return to catalog and verify book availability updated
-    page.goto("http://localhost:5000/catalog")
-    
-    # Find the book row again
-    book_row = page.locator('tr:has-text("Existing Book")')
+    # Verify available copies decreased from 3 to 2
+    book_row = page.locator(f'tr:has-text("{book_title}")')
     expect(book_row).to_be_visible()
+    expect(book_row).to_contain_text("2")  # Should show 2 available now
+
+
+# ==================== BONUS: COMPLETE FLOW ====================
+def test_user_flow_complete_library_lifecycle(page: Page):
+    """
+    Complete User Flow: Add book → Browse → Borrow → Verify → Return → Verify
     
-    # Verify available copies decreased from 2 to 1
-    # Could be displayed as "1 / 2" or just "1 available"
-    expect(book_row).to_contain_text('1')
+    This tests the complete lifecycle of a book in the library system
+    """
     
-    # Verify the borrow button is still present (since 1 copy remains)
-    borrow_button = book_row.locator('button:has-text("Borrow")')
-    expect(borrow_button).to_be_visible()
-    expect(borrow_button).to_be_enabled()
+    # Generate unique data
+    uid = uuid.uuid4().hex[:10]
+    book_title = f"Complete Flow Book {uid}"
+    author_name = f"Test Author {uid}"
+    isbn = ''.join(random.choices("0123456789", k=13))
+    patron_id = ''.join(random.choices("0123456789", k=6))
+    
+    # Part 1: Librarian adds a new book
+    page.goto("http://127.0.0.1:5000")
+    page.get_by_role("link", name="➕ Add Book").click()
+    
+    page.get_by_role("textbox", name="Title *").fill(book_title)
+    page.get_by_role("textbox", name="Author *").fill(author_name)
+    page.get_by_role("textbox", name="ISBN *").fill(isbn)
+    page.get_by_role("spinbutton", name="Total Copies *").fill("4")
+    
+    page.get_by_role("button", name="Add Book to Catalog").click()
+    expect(page).to_have_url("http://127.0.0.1:5000/catalog")
+    
+    # Part 2: Verify book appears in catalog with 4 copies
+    expect(page.get_by_role("cell", name=book_title)).to_be_visible()
+    book_row = page.locator(f'tr:has-text("{book_title}")')
+    expect(book_row).to_contain_text("4")
+    
+    # Part 3: Patron borrows the book
+    patron_input = book_row.get_by_role("textbox", name="Patron ID")
+    patron_input.fill(patron_id)
+    book_row.get_by_role("button", name="Borrow").click()
+    
+    expect(page).to_have_url("http://127.0.0.1:5000/catalog")
+    
+    # Part 4: Verify available copies decreased to 3
+    page.get_by_role("link", name="🔍 Search").click()
+    page.get_by_role("textbox", name="Search Term").fill(book_title)
+    page.get_by_role("button", name="🔍 Search").click()
+    
+    book_row = page.locator(f'tr:has-text("{book_title}")')
+    expect(book_row).to_contain_text("3")
+    
+    # Part 5: Check patron status report
+    page.get_by_role("link", name="📊 Patron Report").click()
+    page.get_by_role("textbox", name="Patron ID").fill(patron_id)
+    page.get_by_role("button", name="Get Status").click()
+    
+    # Verify patron has borrowed the book
+    expect(page.get_by_text(book_title)).to_be_visible()
+    expect(page.get_by_text("Books Currently Borrowed: 1")).to_be_visible()
+    
+    # Part 6: Return the book
+    page.get_by_role("link", name="📤 Return Book").click()
+    page.get_by_role("textbox", name="Patron ID").fill(patron_id)
+    page.get_by_role("combobox", name="Book").select_option(label=book_title)
+    page.get_by_role("button", name="Return Book").click()
+    
+    expect(page).to_have_url("http://127.0.0.1:5000/catalog")
+    
+    # Part 7: Verify available copies increased back to 4
+    page.get_by_role("link", name="🔍 Search").click()
+    page.get_by_role("textbox", name="Search Term").fill(book_title)
+    page.get_by_role("button", name="🔍 Search").click()
+    
+    book_row = page.locator(f'tr:has-text("{book_title}")')
+    expect(book_row).to_contain_text("4")
